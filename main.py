@@ -45,7 +45,9 @@ async def main():
             # Создаем aiohttp приложение для прослушивания порта
             app = web.Application()
             app.router.add_get('/', handle)
-            app.router.add_post('/webhook', bot.bot.handle_webhook)
+            
+            # Правильный способ обработки вебхуков в aiogram 3.x
+            app.router.add_post('/webhook', bot.dp._process_update)
             
             # Запускаем HTTP сервер
             runner = web.AppRunner(app)
