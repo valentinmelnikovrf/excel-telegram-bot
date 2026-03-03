@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.env
+*.so
+
+# Данные
+data/
+*.xlsx
+!*.xlsx
+
+# VS Code
+.vscode/
+.idea/
+
+# Логи
+*.log
