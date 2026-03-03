@@ -70,29 +70,4 @@ text
 Просмотр статистики использования
 Управление настройками
 
-Команды:
-/admin – открыть админ-панель
-Установка цен через кнопки
 
-🏗 Техническая реализация
-text
-excel-bot/
-├── src/
-│   ├── bot.py              # Основная логика бота
-│   ├── config.py            # Конфигурация
-│   ├── excel_processor.py   # Обработка Excel
-│   ├── excel_validator.py   # Проверка файлов
-│   ├── messages.py          # Тексты сообщений
-│   ├── payments.py          # Оплата Stars
-│   └── prices.py            # Управление ценами
-├── images/                  # Картинки-инструкции
-├── data/                    # Временные файлы
-├── main.py                  # Точка входа
-└── requirements.txt         # Зависимости
-
-Стек технологий:
-
-Python 3.13
-Aiogram 3.4 (Telegram API)
-Pandas + OpenPyXL (работа с Excel)
-Telegram Stars (оплата)
