@@ -4,10 +4,7 @@ import os
 from src.config import Config
 from src.bot import ExcelBot
 from aiohttp import web
-
-# Создаем простое HTTP-приложение для проверки порта
-async def handle(request):
-    return web.Response(text="Бот работает!")
+from aiogram.webhook.aiohttp_server import SimpleRequestHandler
 
 async def main():
     # Настройка логирования
@@ -34,28 +31,55 @@ async def main():
         if os.getenv('RENDER', False):
             logging.info("🌐 Запуск на Render.com в режиме вебхука")
             
-            # Получаем порт из переменной окружения (Render дает PORT=10000)
+            # Получаем порт из переменной окружения
             port = int(os.getenv('PORT', 10000))
             
-            # Устанавливаем вебхук
-            webhook_url = f"https://{os.getenv('RENDER_EXTERNAL_HOSTNAME')}/webhook"
-            await bot.bot.set_webhook(webhook_url)
-            logging.info(f"✅ Вебхук установлен: {webhook_url}")
+            # URL для вебхука
+            render_url = os.getenv('RENDER_EXTERNAL_HOSTNAME', 'excel-telegram-bot.onrender.com')
+            webhook_url = f"https://{render_url}/webhook"
             
-            # Создаем aiohttp приложение для прослушивания порта
+            # Создаем aiohttp приложение
             app = web.Application()
-            app.router.add_get('/', handle)
             
-            # Правильный способ обработки вебхуков в aiogram 3.x
-            app.router.add_post('/webhook', bot.dp._process_update)
+            # ВАЖНО: Регистрируем обработчик вебхуков ПРАВИЛЬНО
+            webhook_requests_handler = SimpleRequestHandler(
+                dispatcher=bot.dp,
+                bot=bot.bot,
+            )
+            webhook_requests_handler.register(app, path='/webhook')
             
-            # Запускаем HTTP сервер
+            # Добавляем обработчик для корневого адреса (проверка)
+            async def handle_root(request):
+                return web.Response(
+                    text="✅ Бот работает! Вебхук активен.",
+                    content_type='text/html; charset=utf-8'
+                )
+            app.router.add_get('/', handle_root)
+            
+            # Добавляем обработчик для проверки вебхука (GET запросы)
+            async def handle_webhook_get(request):
+                return web.Response(
+                    text="✅ Это адрес для вебхука. Сюда Telegram отправляет POST запросы.",
+                    content_type='text/html; charset=utf-8'
+                )
+            app.router.add_get('/webhook', handle_webhook_get)
+            
+            # Запускаем сервер
             runner = web.AppRunner(app)
             await runner.setup()
             site = web.TCPSite(runner, '0.0.0.0', port)
             await site.start()
             
             logging.info(f"✅ HTTP сервер запущен на порту {port}")
+            logging.info(f"✅ Сервер доступен по адресу: https://{render_url}")
+            
+            # Устанавливаем вебхук ПОСЛЕ запуска сервера
+            await bot.bot.set_webhook(webhook_url)
+            logging.info(f"✅ Вебхук установлен: {webhook_url}")
+            
+            # Проверяем вебхук
+            webhook_info = await bot.bot.get_webhook_info()
+            logging.info(f"📊 Информация о вебхуке: {webhook_info}")
             
             # Бесконечное ожидание
             await asyncio.Event().wait()
@@ -68,6 +92,8 @@ async def main():
         logging.info("🛑 Бот остановлен")
     except Exception as e:
         logging.error(f"❌ Ошибка: {e}")
+        import traceback
+        traceback.print_exc()
 
 if __name__ == "__main__":
     asyncio.run(main())
