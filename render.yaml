@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: excel-bot
+    name: excel-telegram-bot
     env: python
     buildCommand: pip install -r requirements.txt
     startCommand: python main.py
@@ -11,3 +11,5 @@ services:
         sync: false
       - key: PRICE_STARS
         value: 10
+      - key: RENDER
+        value: true

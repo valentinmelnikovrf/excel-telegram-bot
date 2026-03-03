@@ -26,6 +26,14 @@ async def main():
     # Создаём бота
     bot = ExcelBot(config)
     
+    # При локальном запуске удаляем вебхук
+    if not os.getenv('RENDER', False):
+        try:
+            await bot.bot.delete_webhook()
+            logging.info("✅ Вебхук удален для локального запуска")
+        except Exception as e:
+            logging.warning(f"⚠️ Не удалось удалить вебхук: {e}")
+    
     try:
         # Определяем, где мы работаем
         if os.getenv('RENDER', False):
@@ -41,28 +49,21 @@ async def main():
             # Создаем aiohttp приложение
             app = web.Application()
             
-            # ВАЖНО: Регистрируем обработчик вебхуков ПРАВИЛЬНО
+            # Регистрируем обработчик вебхуков
             webhook_requests_handler = SimpleRequestHandler(
                 dispatcher=bot.dp,
                 bot=bot.bot,
             )
             webhook_requests_handler.register(app, path='/webhook')
             
-            # Добавляем обработчик для корневого адреса (проверка)
+            # Добавляем простой обработчик для проверки
             async def handle_root(request):
                 return web.Response(
                     text="✅ Бот работает! Вебхук активен.",
-                    content_type='text/html; charset=utf-8'
+                    content_type='text/html',
+                    charset='utf-8'
                 )
             app.router.add_get('/', handle_root)
-            
-            # Добавляем обработчик для проверки вебхука (GET запросы)
-            async def handle_webhook_get(request):
-                return web.Response(
-                    text="✅ Это адрес для вебхука. Сюда Telegram отправляет POST запросы.",
-                    content_type='text/html; charset=utf-8'
-                )
-            app.router.add_get('/webhook', handle_webhook_get)
             
             # Запускаем сервер
             runner = web.AppRunner(app)
@@ -70,16 +71,11 @@ async def main():
             site = web.TCPSite(runner, '0.0.0.0', port)
             await site.start()
             
-            logging.info(f"✅ HTTP сервер запущен на порту {port}")
-            logging.info(f"✅ Сервер доступен по адресу: https://{render_url}")
-            
-            # Устанавливаем вебхук ПОСЛЕ запуска сервера
+            # Устанавливаем вебхук
             await bot.bot.set_webhook(webhook_url)
             logging.info(f"✅ Вебхук установлен: {webhook_url}")
             
-            # Проверяем вебхук
-            webhook_info = await bot.bot.get_webhook_info()
-            logging.info(f"📊 Информация о вебхуке: {webhook_info}")
+            logging.info(f"✅ HTTP сервер запущен на порту {port}")
             
             # Бесконечное ожидание
             await asyncio.Event().wait()
