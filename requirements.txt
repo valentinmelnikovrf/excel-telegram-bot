@@ -1,6 +1,6 @@
 --only-binary :all:
 aiogram==3.4.1
-pandas==2.2.3
+pandas==2.3.3
 openpyxl==3.1.5
 python-dotenv==1.0.0
 aiofiles==23.2.1
