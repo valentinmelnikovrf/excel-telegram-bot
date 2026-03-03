@@ -3,6 +3,11 @@ import logging
 import os
 from src.config import Config
 from src.bot import ExcelBot
+from aiohttp import web
+
+# Создаем простое HTTP-приложение для проверки порта
+async def handle(request):
+    return web.Response(text="Бот работает!")
 
 async def main():
     # Настройка логирования
@@ -21,18 +26,34 @@ async def main():
     # Создаём папку data если её нет
     os.makedirs("data", exist_ok=True)
     
-    # Создаём и запускаем бота
+    # Создаём бота
     bot = ExcelBot(config)
     
     try:
-        logging.info("🚀 Бот запущен и готов к работе!")
-        
         # Определяем, где мы работаем
         if os.getenv('RENDER', False):
             logging.info("🌐 Запуск на Render.com в режиме вебхука")
+            
+            # Получаем порт из переменной окружения (Render дает PORT=10000)
+            port = int(os.getenv('PORT', 10000))
+            
+            # Устанавливаем вебхук
             webhook_url = f"https://{os.getenv('RENDER_EXTERNAL_HOSTNAME')}/webhook"
             await bot.bot.set_webhook(webhook_url)
             logging.info(f"✅ Вебхук установлен: {webhook_url}")
+            
+            # Создаем aiohttp приложение для прослушивания порта
+            app = web.Application()
+            app.router.add_get('/', handle)
+            app.router.add_post('/webhook', bot.bot.handle_webhook)
+            
+            # Запускаем HTTP сервер
+            runner = web.AppRunner(app)
+            await runner.setup()
+            site = web.TCPSite(runner, '0.0.0.0', port)
+            await site.start()
+            
+            logging.info(f"✅ HTTP сервер запущен на порту {port}")
             
             # Бесконечное ожидание
             await asyncio.Event().wait()
